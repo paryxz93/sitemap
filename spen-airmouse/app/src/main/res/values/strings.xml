@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ATTENZIONE per chi modifica questo file.
+  Dentro una risorsa <string> ogni apostrofo va scritto come backslash
+  apostrofo, altrimenti la compilazione delle risorse fallisce con un errore
+  opaco (IllegalStateException in TableExtractor) che non nomina nemmeno la
+  stringa colpevole. Dove la parola vuole un accento, va usato il carattere
+  accentato vero, mai un apostrofo al suo posto.
+-->
 <resources>
     <string name="app_name">S Pen Air Mouse</string>
     <string name="service_label">S Pen Air Mouse</string>
-    <string name="accessibility_description">Disegna un cursore a schermo e inietta tocchi alle sue coordinate, pilotato dalla S Pen o dal touchpad integrato. Serve il permesso di accessibilita' perche' senza root e' l'unico modo per simulare un tocco fuori dall'app.</string>
+    <string name="accessibility_description">Disegna un cursore a schermo e inietta tocchi alle sue coordinate, pilotato dalla S Pen o dal touchpad integrato. Serve il permesso di accessibilità perché senza root è l\'unico modo per simulare un tocco fuori dall\'app.</string>
 </resources>
