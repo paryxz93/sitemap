@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">S Pen Air Mouse</string>
+    <string name="service_label">S Pen Air Mouse</string>
+    <string name="accessibility_description">Disegna un cursore a schermo e inietta tocchi alle sue coordinate, pilotato dalla S Pen o dal touchpad integrato. Serve il permesso di accessibilita' perche' senza root e' l'unico modo per simulare un tocco fuori dall'app.</string>
+</resources>

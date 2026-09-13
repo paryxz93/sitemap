@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      SYSTEM_ALERT_WINDOW e' il ripiego per l'overlay del cursore.
+      Il percorso primario e' TYPE_ACCESSIBILITY_OVERLAY, che NON richiede
+      alcun permesso runtime perche' la finestra viene aggiunta dal contesto
+      dell'AccessibilityService. Vedi service/CursorOverlay.kt.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!--
+      L'SDK Samsung Pen Remote comunica in Bluetooth Low Energy con la penna
+      tramite un servizio di sistema Samsung. La connessione BLE e' gestita dal
+      sistema, non dall'app, quindi non dichiariamo permessi Bluetooth:
+      l'app non apre mai un GATT proprio.
+      [DA VERIFICARE sulla documentazione ufficiale Samsung se una versione
+      dell'SDK richieda un permesso dedicato.]
+    -->
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.DayNight">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboard|keyboardHidden|navigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.AirMouseAccessibilityService"
+            android:exported="false"
+            android:label="@string/service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+    </application>
+</manifest>
