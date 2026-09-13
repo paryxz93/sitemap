@@ -99,9 +99,16 @@ class SPenInputSource : InputSource {
             return false
         }
 
+        // SpenRemote e' un singleton di processo, quindi la connessione
+        // sopravvive allo spegnimento del servizio di accessibilita'. Tornare
+        // qui dicendo "gia' connessa" sarebbe un errore: lo SpenUnitManager
+        // arriva SOLO dentro onSuccess, e senza quello nessuna unita' viene mai
+        // registrata. La penna resterebbe muta senza che nulla lo segnali.
+        // Si chiude e si riapre, cosi' onSuccess viene garantito.
         if (remote.isConnected) {
-            listener.onStatusChanged("S Pen gia' connessa")
-            return true
+            Log.i(TAG, "Connessione gia' aperta, la richiudo per riottenere lo SpenUnitManager")
+            runCatching { remote.disconnect(context) }
+                .onFailure { Log.w(TAG, "disconnect preventivo fallito", it) }
         }
 
         remote.setConnectionStateChangeListener { state -> onConnectionStateChanged(state) }
@@ -138,8 +145,16 @@ class SPenInputSource : InputSource {
             airMotionUnit?.let { runCatching { manager.unregisterSpenEventListener(it) } }
             buttonUnit?.let { runCatching { manager.unregisterSpenEventListener(it) } }
         }
-        runCatching { SpenRemote.getInstance().disconnect(context) }
-            .onFailure { Log.w(TAG, "disconnect fallito", it) }
+        runCatching {
+            val remote = SpenRemote.getInstance()
+            // Il listener di stato va tolto PRIMA di scollegare. La lambda
+            // cattura questa sorgente, che a sua volta e' tenuta dal servizio:
+            // lasciarla installata sul singleton significa tenere in vita un
+            // servizio gia' spento e ricevere notifiche per conto di un
+            // oggetto morto.
+            remote.setConnectionStateChangeListener(null)
+            remote.disconnect(context)
+        }.onFailure { Log.w(TAG, "disconnect fallito", it) }
 
         listener = null
         unitManager = null
