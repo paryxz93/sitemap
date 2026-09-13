@@ -3,6 +3,7 @@ package it.webfuturo.airmouse.ui
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings as AndroidSettings
@@ -99,6 +100,35 @@ class MainActivity : Activity() {
             caption(
                 "Attiva \"S Pen Air Mouse\" nell'elenco. Senza questo permesso " +
                     "l'app non puo' generare tocchi: senza root non esiste altra strada."
+            )
+        )
+
+        root.addView(sectionHeader("Se l'interruttore e' grigio"))
+        root.addView(
+            caption(
+                "Se nell'elenco accessibilita' la voce appare spenta e non " +
+                    "attivabile, con scritto \"Controllato da impostazione con " +
+                    "restrizioni\", non e' un problema dell'app. E' la protezione " +
+                    "Restricted Settings di Android 13 e successivi: blocca i " +
+                    "servizi di accessibilita' delle app installate fuori dal Play " +
+                    "Store, perche' sono il bersaglio preferito del malware."
+            )
+        )
+        root.addView(
+            primaryButton("Apri i dettagli di questa app") {
+                startActivity(
+                    Intent(
+                        AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", packageName, null)
+                    )
+                )
+            }
+        )
+        root.addView(
+            caption(
+                "Nella pagina che si apre tocca i tre puntini in alto a destra e " +
+                    "scegli \"Consenti impostazioni con restrizioni\". Poi torna " +
+                    "nelle impostazioni accessibilita' e attiva il servizio."
             )
         )
 

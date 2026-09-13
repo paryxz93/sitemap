@@ -4,46 +4,62 @@ Cursore a schermo pilotato dalla S Pen del Galaxy S23 Ultra, con iniezione dei
 tocchi tramite `AccessibilityService`. Funziona sullo schermo del telefono e sul
 monitor esterno in Samsung DeX. Nessun root.
 
+## Se l'interruttore di accessibilità è grigio
+
+È il primo ostacolo che incontrerai, e non è un difetto dell'app.
+
+Se in Accessibilità, App installate, la voce **S Pen Air Mouse** appare spenta e
+non attivabile, con scritto **Controllato da impostazione con restrizioni**, si
+tratta della protezione **Restricted Settings** introdotta con Android 13.
+Android blocca i servizi di accessibilità delle app installate fuori dal Play
+Store, perché sono la porta d'ingresso preferita dal malware.
+
+Come sbloccarla:
+
+1. Impostazioni, App, **S Pen Air Mouse**.
+2. Tocca i **tre puntini in alto a destra**.
+3. Scegli **Consenti impostazioni con restrizioni**.
+4. Torna in Accessibilità, App installate, e attiva il servizio.
+
+L'app ha un pulsante che apre direttamente la pagina al punto 1.
+
+Se la voce nei tre puntini non compare, installa via ADB, che non attiva la
+restrizione:
+
+```bash
+adb install -r spen-airmouse.apk
+# oppure, se la restrizione è già scattata:
+adb shell appops set it.webfuturo.airmouse ACCESS_RESTRICTED_SETTINGS allow
+```
+
 ## Scaricare l'APK
 
-L'APK viene compilato da GitHub Actions a ogni push. Due strade:
+Compilato da GitHub Actions a ogni push.
 
-1. **Dal telefono**, la piu' comoda: apri la release `apk-latest` del
-   repository e scarica l'asset `.apk`.
-2. **Dal computer**: scheda Actions, apri l'ultima run di *Build APK*, scarica
-   l'artifact `spen-airmouse-debug-apk`.
+1. **Dal telefono**: apri la release `apk-latest` del repository e scarica
+   l'asset `.apk`.
+2. **Dal computer**: scheda Actions, ultima run di *Build APK*, artifact
+   `spen-airmouse-debug-apk`.
 
-E' un APK di debug, firmato con la chiave di debug di Gradle: si installa senza
-problemi, ma va abilitata l'installazione da origini sconosciute per il browser
-o il gestore file che usi.
+APK di debug, firmato con la chiave di debug di Gradle: si installa, ma va
+abilitata l'installazione da origini sconosciute per il browser o il gestore
+file che usi.
 
-## Primo avvio
+## Prima configurazione della build
 
-1. Installa l'APK e apri **S Pen Air Mouse**.
-2. Tocca **Apri impostazioni accessibilita'** e attiva il servizio nell'elenco.
-   Senza questo permesso l'app non puo' generare tocchi: senza root non esiste
-   altra strada.
-3. Compaiono il cursore e, in basso, il touchpad.
+I jar del Pen Remote SDK non sono nel repository: non sono ridistribuibili e
+questo repository è pubblico. La CI li ricostruisce da un secret.
 
-## Cosa funziona subito e cosa richiede l'SDK Samsung
+Una volta sola, in Settings, Secrets and variables, Actions, New repository
+secret:
 
-| Funzione | Senza AAR Samsung | Con AAR Samsung |
-|---|---|---|
-| Cursore a schermo | si' | si' |
-| Iniezione tap, pressione lunga, trascinamento | si' | si' |
-| Cursore su monitor esterno in DeX | si' | si' |
-| Movimento da touchpad a schermo | si' | si' |
-| Movimento con la S Pen in aria | no | si' |
-| Pulsante della S Pen | no | si' |
+| Campo | Valore |
+|---|---|
+| Nome | `SPEN_SDK_LIBS_B64` |
+| Valore | base64 di uno zip contenente `spenremote-v1.0.1.jar` e `sdk-v1.0.0.jar` |
 
-L'AAR Samsung non e' nel repository perche' si scarica solo accettando la
-licenza Samsung e non e' ridistribuibile. Istruzioni in
-[`app/libs/README.md`](app/libs/README.md): e' un file da copiare in una
-cartella, nient'altro da configurare.
-
-Il touchpad non e' un segnaposto: usa la stessa identica catena della penna
-(dead zone, ballistica, filtro, overlay, iniezione), quindi tutto cio' che
-funziona con il touchpad funziona con la penna appena aggiungi l'AAR.
+Dettagli e comando per rigenerarlo in [`app/libs/README.md`](app/libs/README.md).
+Senza il secret la build si ferma con un messaggio esplicito.
 
 ## Mappatura del pulsante
 
@@ -55,58 +71,88 @@ ricostruiti dai tempi in `core/ClickStateMachine.kt`.
 |---|---|
 | 1 tap | tocco, equivale al tasto sinistro |
 | 2 tap | pressione prolungata, equivale al tasto destro |
-| Tieni premuto | trascinamento, finche' non rilasci |
+| Tieni premuto | trascinamento, finché non rilasci |
 
-Il tasto destro nativo non e' replicabile e non lo sara': `dispatchGesture`
-inietta eventi **touch**, non eventi mouse. La pressione prolungata e' il gesto
-touch con la stessa semantica, cioe' apre il menu contestuale. Per lo stesso
-motivo non esistono hover ne' rotellina di scorrimento.
+Il tasto destro nativo non è replicabile e non lo sarà: `dispatchGesture`
+inietta eventi **touch**, non eventi mouse. La pressione prolungata è il gesto
+touch con la stessa semantica, cioè apre il menu contestuale. Per lo stesso
+motivo non esistono hover né rotellina di scorrimento.
+
+## Due requisiti del manifest che non sono documentati
+
+Se la penna non si connette, quasi certamente è uno di questi. Nessuno dei due
+compare nella documentazione Samsung né nel progetto di esempio ufficiale, che
+è fermo a targetSdk 28 e quindi non li incontrava. Entrambi sono verificabili
+nel bytecode di `SpenRemote`.
+
+**1. Il permesso di binding.**
+
+```xml
+<uses-permission android:name="com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE" />
+```
+
+Senza, `bindService` restituisce false e l'SDK logga testualmente
+`Add com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE permission`.
+
+**2. La visibilità del pacchetto.**
+
+```xml
+<queries>
+    <package android:name="com.samsung.android.service.aircommand" />
+</queries>
+```
+
+L'SDK non parla direttamente con la penna: è un client AIDL che si lega al
+servizio di sistema `com.samsung.android.service.aircommand`, che tiene lui la
+connessione BLE. Prima di legarsi verifica che il pacchetto esista, con il
+`PackageManager`. Da targetSdk 30 il filtro di visibilità dei pacchetti lo
+nasconde se non è dichiarato, e l'SDK conclude `This device does not support
+S Pen` su un dispositivo che la supporta benissimo.
 
 ## Taratura
 
 Tutti i parametri sono nella schermata principale e si applicano a caldo.
 
-**Stabilizzazione.** Il filtro e' un One Euro, non una media mobile. Una media
+**Stabilizzazione.** Il filtro è un One Euro, non una media mobile. Una media
 mobile impone un compromesso fisso: tarata per togliere il tremore da fermo,
 introduce ritardo in movimento. One Euro rende la frequenza di taglio funzione
-della velocita', quindi e' molto smorzato da fermo e molto reattivo in
-movimento. Tara in quest'ordine:
+della velocità, quindi è molto smorzato da fermo e molto reattivo in movimento.
+Tara in quest'ordine:
 
 1. Porta **Beta** a zero.
-2. Abbassa **Taglio minimo** finche' il cursore e' immobile con la mano ferma.
-3. Alza **Beta** finche' sparisce il ritardo nei movimenti veloci.
+2. Abbassa **Taglio minimo** finché il cursore è immobile con la mano ferma.
+3. Alza **Beta** finché sparisce il ritardo nei movimenti veloci.
 
-**Dead zone.** Alzala finche' il cursore sta fermo da fermo, poi fermati: oltre,
+**Dead zone.** Alzala finché il cursore sta fermo da fermo, poi fermati: oltre,
 il movimento lento diventa a scatti.
 
 **Doppio click.** Con il doppio click attivo, ogni click singolo attende 260 ms
-per vedere se ne arriva un secondo. E' un ritardo su *ogni* click.
+per vedere se ne arriva un secondo. È un ritardo su *ogni* click.
 Disattivandolo il tap parte immediatamente, ma si perde il click secondario.
 
 ## La domanda aperta, e come rispondere sul dispositivo
 
 La documentazione Samsung indica che gli eventi della S Pen sono consegnati
-all'activity in primo piano, e che i listener vanno deregistrati in `onPause`.
-Se il vincolo valesse anche per un `AccessibilityService`, la penna piloterebbe
-il cursore solo con questa app aperta, che e' l'esatto contrario di un air
-mouse di sistema.
+all'activity in primo piano. Nel client dell'SDK, però, non c'è alcun controllo
+del genere: è un semplice client AIDL, e chi decide se continuare a inviare
+eventi è il servizio di sistema Samsung, il cui comportamento da qui non è
+ispezionabile.
 
-Non e' una domanda a cui si possa rispondere leggendo la documentazione, quindi
-l'app la misura. Il contatore **Eventi movimento** nella schermata di stato
-conta i campioni ricevuti:
+Quindi l'app lo misura. Il contatore **Eventi movimento** nella schermata di
+stato conta i campioni ricevuti:
 
 1. Apri un'altra app qualsiasi.
 2. Muovi la S Pen in aria per qualche secondo.
 3. Torna in S Pen Air Mouse e guarda il contatore.
 
-Se e' salito, l'air mouse funziona a livello di sistema. Se e' fermo, la penna
-funziona solo con l'app in primo piano e altrove resta valido il touchpad.
+Se è salito, l'air mouse funziona a livello di sistema. Se è fermo, la penna
+funziona solo con l'app in primo piano, e altrove resta valido il touchpad.
 
 ## Architettura
 
 ```
 input/                      sorgenti, stesso contratto per entrambe
-  SPenInputSource           SDK Samsung via reflection
+  SPenInputSource           Samsung Pen Remote SDK, chiamate tipizzate
   TouchpadInputSource       superficie a schermo, nessuna dipendenza
 core/
   PointerEngine             dead zone, ballistica, integrazione, clamp
@@ -120,27 +166,23 @@ service/
   GestureInjector           GestureDescription, con setDisplayId
 ```
 
-Due scelte che vale la pena conoscere.
+Il touchpad a schermo non è un ripiego: usa la stessa identica catena della
+penna e la stessa topologia, cioè superficie di movimento più un solo pulsante.
+Serve a collaudare tutto anche senza penna, e in DeX resta utile per conto suo.
 
-**La finestra del cursore e' a tutto schermo e non si sposta mai.** La strada
+**La finestra del cursore è a tutto schermo e non si sposta mai.** La strada
 ovvia sarebbe una finestrella grande quanto l'icona, riposizionata con
 `updateViewLayout` a ogni campione: sarebbero decine di transazioni al secondo
 verso `WindowManagerService`, con ritardo variabile. Qui il cursore si muove
 dentro la finestra, ridisegnando, e il movimento non esce mai dal processo.
 Effetto collaterale importante: le coordinate del disegno coincidono per
-costruzione con quelle passate a `dispatchGesture`, perche' entrambe sono
-riferite all'origine dello stesso display. E' cosi' che si evita il difetto
-classico di questi progetti, il click che arriva dove il cursore non e' piu'.
-
-**L'SDK Samsung e' raggiunto per reflection, non come dipendenza.** Cosi' il
-progetto compila sempre, l'APK e' sempre installabile e l'AAR resta un innesto
-opzionale. Il costo e' che un cambio di firma nell'SDK emerge a runtime invece
-che in compilazione: per questo ogni lookup e' difensivo e logga il nome esatto
-di cio' che manca, sotto il tag `SPenInputSource`.
+costruzione con quelle passate a `dispatchGesture`, perché entrambe sono
+riferite all'origine dello stesso display. È così che si evita il difetto
+classico di questi progetti, il click che arriva dove il cursore non è più.
 
 ## Compilare in locale
 
-Servono JDK 17 e Android SDK con piattaforma 34.
+Servono JDK 17, Android SDK con piattaforma 34, e i due jar in `app/libs/`.
 
 ```bash
 cd spen-airmouse

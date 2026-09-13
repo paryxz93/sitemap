@@ -5,5 +5,9 @@ local.properties
 .idea/
 .DS_Store
 captures/
+
+# I jar dell'SDK Samsung non entrano nel repository: non sono ridistribuibili
+# e questo repository e' pubblico. La CI li ricostruisce dal secret
+# SPEN_SDK_LIBS_B64. Vedi app/libs/README.md.
+app/libs/*.jar
 app/libs/*.aar
-!app/libs/README.md

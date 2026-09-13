@@ -10,13 +10,35 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
-      L'SDK Samsung Pen Remote comunica in Bluetooth Low Energy con la penna
-      tramite un servizio di sistema Samsung. La connessione BLE e' gestita dal
-      sistema, non dall'app, quindi non dichiariamo permessi Bluetooth:
-      l'app non apre mai un GATT proprio.
-      [DA VERIFICARE sulla documentazione ufficiale Samsung se una versione
-      dell'SDK richieda un permesso dedicato.]
+      L'SDK Pen Remote non parla direttamente con la penna: e' un client AIDL
+      che si lega al servizio di sistema Samsung com.samsung.android.service
+      .aircommand, il quale tiene lui la connessione BLE. L'app non apre mai un
+      GATT proprio, quindi nessun permesso Bluetooth.
+
+      Servono pero' le due dichiarazioni qui sotto. Nessuna delle due e' nella
+      documentazione ne' nel progetto di esempio ufficiale, che risale a
+      targetSdk 28 e non incontrava il problema. Entrambe sono verificabili nel
+      bytecode dell'SDK.
     -->
+
+    <!--
+      Senza questo permesso bindService restituisce false e l'SDK logga
+      testualmente "Add com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE
+      permission" (stringa presente in SpenRemote.startServiceBind).
+    -->
+    <uses-permission android:name="com.samsung.android.sdk.penremote.BIND_SPEN_REMOTE" />
+
+
+    <!--
+      SpenRemote.isAirCommandExisted() interroga il PackageManager per questo
+      pacchetto. Da targetSdk 30 il filtro di visibilita' dei pacchetti lo
+      nasconde se non e' dichiarato qui, e l'SDK conclude "This device does not
+      support S Pen" su un dispositivo che la supporta. Questo blocco e' la
+      differenza fra la penna che funziona e un errore che accusa il telefono.
+    -->
+    <queries>
+        <package android:name="com.samsung.android.service.aircommand" />
+    </queries>
 
     <application
         android:allowBackup="false"
